@@ -148,6 +148,14 @@ class JVMInstruction:
 
     operands: bytes = b""
 
+    constant_index: int = 0
+
+    owner: str = ""
+
+    name: str = ""
+
+    descriptor: str = ""
+
 
 @dataclass(slots=True)
 class JVMException:
@@ -200,7 +208,7 @@ class JVMClass:
 
     major_version: int = 0
 
-    constant_pool: list = field(default_factory=list)
+    constant_pool: ConstantPool = field(default_factory=ConstantPool)
 
     access_flags: int = 0
 
@@ -215,3 +223,141 @@ class JVMClass:
     methods: list[JVMMethod] = field(default_factory=list)
 
     attributes: list[JVMAttribute] = field(default_factory=list)
+
+@dataclass(slots=True)
+class ConstantPool:
+
+    entries: list = field(default_factory=list)
+
+    def __len__(self):
+
+        return len(self.entries)
+
+    def __getitem__(self, index: int):
+
+        return self.entries[index]
+
+    def append(self, value):
+
+        self.entries.append(value)
+
+@dataclass(slots=True) 
+class CPEntry:
+
+    tag: int
+
+
+@dataclass(slots=True)
+class CPUtf8(CPEntry):
+
+    value: str
+
+
+@dataclass(slots=True)
+class CPInteger(CPEntry):
+
+    value: int
+
+
+@dataclass(slots=True)
+class CPFloat(CPEntry):
+
+    value: float
+
+
+@dataclass(slots=True)
+class CPLong(CPEntry):
+
+    value: int
+
+
+@dataclass(slots=True)
+class CPDouble(CPEntry):
+
+    value: float
+
+
+@dataclass(slots=True)
+class CPClass(CPEntry):
+
+    name_index: int
+
+
+@dataclass(slots=True)
+class CPString(CPEntry):
+
+    string_index: int
+
+
+@dataclass(slots=True)
+class CPFieldRef(CPEntry):
+
+    class_index: int
+
+    name_and_type_index: int
+
+
+@dataclass(slots=True)
+class CPMethodRef(CPEntry):
+
+    class_index: int
+
+    name_and_type_index: int
+
+
+@dataclass(slots=True)
+class CPInterfaceMethodRef(CPEntry):
+
+    class_index: int
+
+    name_and_type_index: int
+
+
+@dataclass(slots=True)
+class CPNameAndType(CPEntry):
+
+    name_index: int
+
+    descriptor_index: int
+
+
+@dataclass(slots=True)
+class CPMethodHandle(CPEntry):
+
+    reference_kind: int
+
+    reference_index: int
+
+
+@dataclass(slots=True)
+class CPMethodType(CPEntry):
+
+    descriptor_index: int
+
+
+@dataclass(slots=True)
+class CPDynamic(CPEntry):
+
+    bootstrap_method_attr_index: int
+
+    name_and_type_index: int
+
+
+@dataclass(slots=True)
+class CPInvokeDynamic(CPEntry):
+
+    bootstrap_method_attr_index: int
+
+    name_and_type_index: int
+
+
+@dataclass(slots=True)
+class CPModule(CPEntry):
+
+    name_index: int
+
+
+@dataclass(slots=True)
+class CPPackage(CPEntry):
+
+    name_index: int

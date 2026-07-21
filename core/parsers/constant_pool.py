@@ -1,6 +1,26 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from core.models import (
+    ConstantPool,
+    CPEntry,
+    CPUtf8,
+    CPInteger,
+    CPFloat,
+    CPLong,
+    CPDouble,
+    CPClass,
+    CPString,
+    CPFieldRef,
+    CPMethodRef,
+    CPInterfaceMethodRef,
+    CPNameAndType,
+    CPMethodHandle,
+    CPMethodType,
+    CPDynamic,
+    CPInvokeDynamic,
+    CPModule,
+    CPPackage,
+)
 
 from core.parsers.byte_reader import ByteReader
 
@@ -24,70 +44,19 @@ CONSTANT_Module = 19
 CONSTANT_Package = 20
 
 
-@dataclass(slots=True)
-class CPEntry:
+class ConstantPoolParser:
 
-    tag: int
-
-
-@dataclass(slots=True)
-class CPUtf8(CPEntry):
-
-    value: str
-
-
-@dataclass(slots=True)
-class CPInteger(CPEntry):
-
-    value: int
-
-@dataclass(slots=True)
-class CPFloat(CPEntry):
-
-    value: float
-
-
-@dataclass(slots=True)
-class CPLong(CPEntry):
-
-    value: int
-
-
-@dataclass(slots=True)
-class CPDouble(CPEntry):
-
-    value: float
-
-
-@dataclass(slots=True)
-class CPClass(CPEntry):
-
-    name_index: int
-
-
-@dataclass(slots=True)
-class CPString(CPEntry):
-
-    string_index: int
-
-@dataclass(slots=True)
-class CPNameAndType(CPEntry):
-
-    name_index: int
-
-    descriptor_index: int
-
-    class ConstantPoolParser:
-
-     def parse(
+    def parse(
         self,
         reader: ByteReader
-    ) -> list[CPEntry | None]:
+    ) -> ConstantPool:
 
         count = reader.u2()
 
-        # El índice 0 no existe según la especificación
-        pool: list[CPEntry | None] = [None]
+        pool = ConstantPool()
+
+        # El índice 0 no existe según la especificación JVM.
+        pool.append(None)
 
         index = 1
 
@@ -102,7 +71,6 @@ class CPNameAndType(CPEntry):
 
             pool.append(entry)
 
-            # Long y Double ocupan dos entradas
             if tag in (
                 CONSTANT_Long,
                 CONSTANT_Double
@@ -125,69 +93,59 @@ class CPNameAndType(CPEntry):
     ) -> CPEntry:
 
         if tag == CONSTANT_Utf8:
-
             return self._utf8(reader)
 
         if tag == CONSTANT_Integer:
-
-            return CPInteger(
-                tag,
-                reader.i4()
-            )
+            return self._integer(reader)
 
         if tag == CONSTANT_Float:
-
-            return CPFloat(
-                tag,
-                reader.f4()
-            )
+            return self._float(reader)
 
         if tag == CONSTANT_Long:
-
-            return CPLong(
-                tag,
-                reader.i8()
-            )
+            return self._long(reader)
 
         if tag == CONSTANT_Double:
-
-            return CPDouble(
-                tag,
-                reader.f8()
-            )
+            return self._double(reader)
 
         if tag == CONSTANT_Class:
-
-            return CPClass(
-                tag,
-                reader.u2()
-            )
+            return self._class(reader)
 
         if tag == CONSTANT_String:
+            return self._string(reader)
 
-            return CPString(
-                tag,
-                reader.u2()
-            )
+        if tag == CONSTANT_Fieldref:
+            return self._fieldref(reader)
+
+        if tag == CONSTANT_Methodref:
+            return self._methodref(reader)
+
+        if tag == CONSTANT_InterfaceMethodref:
+            return self._interface_methodref(reader)
 
         if tag == CONSTANT_NameAndType:
+            return self._name_and_type(reader)
 
-            return CPNameAndType(
+        if tag == CONSTANT_MethodHandle:
+            return self._method_handle(reader)
 
-                tag,
+        if tag == CONSTANT_MethodType:
+            return self._method_type(reader)
 
-                reader.u2(),
+        if tag == CONSTANT_Dynamic:
+            return self._dynamic(reader)
 
-                reader.u2()
+        if tag == CONSTANT_InvokeDynamic:
+            return self._invoke_dynamic(reader)
 
-            )
+        if tag == CONSTANT_Module:
+            return self._module(reader)
+
+        if tag == CONSTANT_Package:
+            return self._package(reader)
 
         raise ValueError(
-
             f"Constant Pool tag desconocido: {tag}"
-
         )
-
 
     def _utf8(
         self,
@@ -199,15 +157,178 @@ class CPNameAndType(CPEntry):
         value = reader.read(length)
 
         return CPUtf8(
-
             CONSTANT_Utf8,
-
             value.decode(
-
                 "utf-8",
-
                 errors="replace"
-
             )
+        )
 
+    def _integer(
+        self,
+        reader: ByteReader
+    ) -> CPInteger:
+
+        return CPInteger(
+            CONSTANT_Integer,
+            reader.i4()
+        )
+
+    def _float(
+        self,
+        reader: ByteReader
+    ) -> CPFloat:
+
+        return CPFloat(
+            CONSTANT_Float,
+            reader.f4()
+        )
+
+    def _long(
+        self,
+        reader: ByteReader
+    ) -> CPLong:
+
+        return CPLong(
+            CONSTANT_Long,
+            reader.i8()
+        )
+
+    def _double(
+        self,
+        reader: ByteReader
+    ) -> CPDouble:
+
+        return CPDouble(
+            CONSTANT_Double,
+            reader.f8()
+        )
+
+    def _class(
+        self,
+        reader: ByteReader
+    ) -> CPClass:
+
+        return CPClass(
+            CONSTANT_Class,
+            reader.u2()
+        )
+
+    def _string(
+        self,
+        reader: ByteReader
+    ) -> CPString:
+
+        return CPString(
+            CONSTANT_String,
+            reader.u2()
+        )
+
+    def _name_and_type(
+        self,
+        reader: ByteReader
+    ) -> CPNameAndType:
+        
+        def _fieldref(
+        self,
+        reader: ByteReader
+    ) -> CPFieldRef:
+
+         return CPFieldRef(
+            CONSTANT_Fieldref,
+            reader.u2(),
+            reader.u2()
+        )
+
+    def _methodref(
+        self,
+        reader: ByteReader
+    ) -> CPMethodRef:
+
+        return CPMethodRef(
+            CONSTANT_Methodref,
+            reader.u2(),
+            reader.u2()
+        )
+
+    def _interface_methodref(
+        self,
+        reader: ByteReader
+    ) -> CPInterfaceMethodRef:
+
+        return CPInterfaceMethodRef(
+            CONSTANT_InterfaceMethodref,
+            reader.u2(),
+            reader.u2()
+        )
+
+    def _method_handle(
+        self,
+        reader: ByteReader
+    ) -> CPMethodHandle:
+
+        return CPMethodHandle(
+            CONSTANT_MethodHandle,
+            reader.u1(),
+            reader.u2()
+        )
+
+    def _method_type(
+        self,
+        reader: ByteReader
+    ) -> CPMethodType:
+
+        return CPMethodType(
+            CONSTANT_MethodType,
+            reader.u2()
+        )
+
+    def _dynamic(
+        self,
+        reader: ByteReader
+    ) -> CPDynamic:
+
+        return CPDynamic(
+            CONSTANT_Dynamic,
+            reader.u2(),
+            reader.u2()
+        )
+
+    def _invoke_dynamic(
+        self,
+        reader: ByteReader
+    ) -> CPInvokeDynamic:
+
+        return CPInvokeDynamic(
+            CONSTANT_InvokeDynamic,
+            reader.u2(),
+            reader.u2()
+        )
+
+    def _module(
+        self,
+        reader: ByteReader
+    ) -> CPModule:
+
+        return CPModule(
+            CONSTANT_Module,
+            reader.u2()
+        )
+
+    def _package(
+        self,
+        reader: ByteReader
+    ) -> CPPackage:
+
+        return CPPackage(
+            CONSTANT_Package,
+            reader.u2()
+        )
+        
+        
+
+        return CPNameAndType(
+            CONSTANT_NameAndType,
+            reader.u2(),
+            reader.u2()
         )
